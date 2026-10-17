@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>나또픽 — 아이 픽업 알림을 온 가족이 함께</title>
+    <meta name="description" content="학원·유치원 픽업 시간 전에 엄마·아빠·할머니 폰에 같이 알람이 울려요. 갤럭시 전용 · 무료" />
+    <meta property="og:title" content="나또픽 — 아이 픽업 알림을 온 가족이 함께" />
+    <meta property="og:description" content="학원·유치원 픽업 시간 전에 엄마·아빠·할머니 폰에 같이 알람이 울려요. 갤럭시 전용 · 무료" />
+    <!--
+      유입 링크 착지 페이지 (2026-10-16, docs/GROWTH_UX.md — 사장님 "모든 건 유입부터")
+        go.html?src=referral            앱 안 '다른 학부모에게 알려주기'
+        go.html?src=share               공유한 시간표 이미지·PDF
+        go.html?src=academy&c=<학원>    학원 단톡 공지·입구 QR (c 는 영문·숫자 약칭)
+      하는 일: 안드로이드면 Play 스토어로 바로 보낸다 — referrer 에 utm_source/medium/campaign 을 실어서.
+        앱이 첫 실행 때 그 값을 읽어 install_source 로 남기고(lib/install-referrer.ts), 월 05:00 주간 리포트의
+        '📥 설치 경로' 줄이 출처별로 센다. 그래서 링크마다 src 를 꼭 붙인다.
+      ⚠️ 카톡 인앱 브라우저는 스토어로 못 넘긴다(join.html 과 같은 이유) → 외부 브라우저로 다시 연다.
+      ⚠️ 값은 영문·숫자·_.- 40자만 남긴다 — 앱의 clean() 과 같은 규칙. 한글 학원명은 버려지니 약칭을 쓴다.
+    -->
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        background: #fff;
+        color: #1a1a2e;
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      .card { padding: 32px 24px; max-width: 380px; }
+      h1 { font-size: 24px; margin: 0 0 6px; }
+      .tag { font-size: 15px; color: #ef7b21; font-weight: 700; margin: 0 0 20px; }
+      ul { padding-left: 20px; margin: 0 0 24px; color: #444; line-height: 1.7; font-size: 15px; }
+      a.btn {
+        display: block;
+        text-align: center;
+        background: #ef7b21;
+        color: #fff;
+        text-decoration: none;
+        font-size: 17px;
+        font-weight: 700;
+        padding: 15px 20px;
+        border-radius: 12px;
+      }
+      .note { margin-top: 14px; font-size: 13px; color: #888; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>🍊 나또픽</h1>
+      <p class="tag">아이 픽업 알림을 온 가족이 함께</p>
+      <ul>
+        <li>학원·유치원 픽업 시간 전에 <b>엄마·아빠·할머니 폰에 같이</b> 알람이 울려요</li>
+        <li>무음이어도 크게 울리는 알람 — 놓치지 않아요</li>
+        <li>요일별 시간표를 한 번만 넣으면 매주 알아서</li>
+      </ul>
+      <a id="cta" class="btn" href="#">Play 스토어에서 받기</a>
+      <p class="note" id="note">갤럭시(안드로이드) 전용 · 무료</p>
+    </div>
+    <script>
+      (function () {
+        var PACKAGE = 'com.pickupseo.pickupalarm';
+        var params = new URLSearchParams(location.search);
+        function clean(v) {
+          return (v || '').replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 40);
+        }
+        var src = clean(params.get('src')) || 'web';
+        var medium = clean(params.get('m')) || 'link';
+        var camp = clean(params.get('c'));
+        var ref = 'utm_source=' + src + '&utm_medium=' + medium + (camp ? '&utm_campaign=' + camp : '');
+        var storeUrl =
+          'https://play.google.com/store/apps/details?id=' + PACKAGE + '&referrer=' + encodeURIComponent(ref);
+        var cta = document.getElementById('cta');
+        cta.setAttribute('href', storeUrl);
+
+        var ua = navigator.userAgent || '';
+        var isAndroid = /android/i.test(ua);
+        var inKakao = /KAKAOTALK/i.test(ua);
+        if (isAndroid && inKakao) {
+          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+          return;
+        }
+        if (isAndroid) {
+          location.href = storeUrl; // 바로 스토어로 — 버튼은 자동 이동이 막혔을 때를 위한 것
+        } else {
+          document.getElementById('note').textContent =
+            '갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요.';
+        }
+      })();
+    </script>
+  </body>
+</html>
