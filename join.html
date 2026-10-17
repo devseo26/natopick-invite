@@ -41,6 +41,16 @@
         padding: 14px 28px;
         border-radius: 12px;
       }
+      .steps {
+        text-align: left;
+        margin: 22px auto 0;
+        padding-left: 20px;
+        color: #444;
+        font-size: 14px;
+        line-height: 1.8;
+        max-width: 280px;
+      }
+      .note { margin-top: 10px; font-size: 13px; color: #999; }
       .code {
         margin-top: 20px;
         font-size: 13px;
@@ -57,6 +67,13 @@
       <h1>🍊 나또픽 가족 초대</h1>
       <p id="msg">앱을 여는 중이에요…<br />잠시 후에도 안 열리면 아래 버튼을 눌러주세요.</p>
       <a id="cta" class="btn" href="#">앱 열기 / 설치하기</a>
+      <!-- 받는 사람이 할 일 3단계 (2026-10-16 — 초대코드 22개 중 1개만 쓰였다, docs/GROWTH_UX.md P0-4) -->
+      <ol class="steps" id="steps">
+        <li>Play 스토어에서 <b>설치</b></li>
+        <li>나또픽을 열고 <b>카카오로 시작하기</b></li>
+        <li>자동으로 우리 가족에 들어가요</li>
+      </ol>
+      <p class="note">갤럭시(안드로이드) 전용 · 무료</p>
       <div class="code" id="codeBox"></div>
     </div>
     <script>
@@ -109,7 +126,9 @@
         } else {
           // iOS·데스크톱: 안드로이드 전용 앱이므로 스토어로 안내
           cta.setAttribute('href', storeUrl);
-          msg.textContent = '나또픽은 안드로이드 앱이에요. 안드로이드 폰에서 링크를 열어주세요.';
+          msg.textContent =
+            '나또픽은 갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요 — 초대해 준 가족에게 알려 주세요.';
+          document.getElementById('steps').style.display = 'none';
         }
       })();
     </script>
