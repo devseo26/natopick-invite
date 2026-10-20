@@ -100,6 +100,14 @@
 
         // 카톡 인앱 브라우저는 intent:// 앱 실행을 막는다 → 외부 브라우저(크롬)로 넘긴다.
         if (isAndroid && inKakao) {
+          // 외부 브라우저로 못 넘어가는 폰 대비(2026-10-20, go.html 과 같은 이유 — appmonitor 전달).
+          //   단추는 Play 스토어 앱을 바로 연다 — referrer 에 invite=코드를 실어 **설치 뒤 자동 참여는 그대로**.
+          //   앱이 이미 있으면 스토어가 '열기'만 보여 코드가 안 넘어간다 → 아래에 코드를 크게 보여 직접 넣게 한다.
+          cta.setAttribute('href', 'intent://details?id=' + PACKAGE + '&referrer=' + encodeURIComponent('invite=' + code)
+            + '#Intent;scheme=market;package=com.android.vending;end');
+          cta.textContent = 'Play 스토어 앱에서 받기';
+          msg.innerHTML = '앱으로 넘어가는 중이에요…<br />안 넘어가면 아래 단추를 눌러 주세요.<br />' +
+            '앱이 이미 있으면 앱을 열고 초대코드를 넣어 주세요.<br />스토어가 안 열리면 오른쪽 위 ⋮ → 다른 브라우저로 열기';
           location.href =
             'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
           return;
