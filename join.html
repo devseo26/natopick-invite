@@ -95,7 +95,16 @@
         codeBox.innerHTML = '초대코드 <b>' + code + '</b>';
 
         var ua = navigator.userAgent || '';
-        var isAndroid = /android/i.test(ua);
+        // 안드로이드 판별(2026-11-01 — 사장님 "GoalStep 처럼 바로 스토어로", appmonitor 전달 · GoalStep 1a932ed 와 같은 방식).
+        //   삼성 인터넷은 태블릿(S9FE)에서 'PC 화면'(데스크톱 UA)으로 열어 UA 에 Android 가 없다 → PC 로 보고 자동 이동을 안 해
+        //   'Play 스토어에서 받기' 단추만 남았다(폰은 UA 에 Android 가 있어 원래 자동). 그래서 셋을 같이 본다:
+        //   브라우저가 알려 주는 플랫폼 · 카톡에서 넘길 때 붙인 표시(k=a) · 리눅스+터치(크롬북 제외)
+        var uaPlat = (navigator.userAgentData && navigator.userAgentData.platform) || '';
+        var touch = (navigator.maxTouchPoints || 0) > 1;
+        var isAndroid = /android/i.test(ua) || /android/i.test(uaPlat) || params.get('k') === 'a'
+          || (/Linux/i.test(ua) && !/CrOS/i.test(ua) && touch);
+        // 아이패드는 'Macintosh'+터치로 온다 — 아이폰 문구를 줄지 PC 문구를 줄지 가른다
+        var isIos = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && touch);
         var inKakao = /KAKAOTALK/i.test(ua);
 
         // 카톡 인앱 브라우저는 intent:// 앱 실행을 막는다 → 외부 브라우저(크롬)로 넘긴다.
@@ -108,8 +117,9 @@
           cta.textContent = 'Play 스토어 앱에서 받기';
           msg.innerHTML = '앱으로 넘어가는 중이에요…<br />안 넘어가면 아래 단추를 눌러 주세요.<br />' +
             '앱이 이미 있으면 앱을 열고 초대코드를 넣어 주세요.<br />스토어가 안 열리면 오른쪽 위 ⋮ → 다른 브라우저로 열기';
-          location.href =
-            'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+          // 외부 브라우저에도 '안드로이드에서 왔다'를 알린다(k=a) — 태블릿 삼성 인터넷은 PC 화면으로 열려 스스로 못 안다
+          var ext = location.href + (location.href.indexOf('?') === -1 ? '?' : '&') + 'k=a';
+          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(ext);
           return;
         }
 
@@ -134,8 +144,9 @@
         } else {
           // iOS·데스크톱: 안드로이드 전용 앱이므로 스토어로 안내
           cta.setAttribute('href', storeUrl);
-          msg.textContent =
-            '나또픽은 갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요 — 초대해 준 가족에게 알려 주세요.';
+          msg.textContent = isIos
+            ? '나또픽은 갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요 — 초대해 준 가족에게 알려 주세요.'
+            : '나또픽은 갤럭시(안드로이드) 전용 앱이에요. 폰에서 이 링크를 열어 주세요.';
           document.getElementById('steps').style.display = 'none';
         }
       })();
