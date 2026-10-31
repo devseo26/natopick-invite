@@ -77,13 +77,25 @@
         var medium = clean(params.get('m')) || 'link';
         var camp = clean(params.get('c'));
         var ref = 'utm_source=' + src + '&utm_medium=' + medium + (camp ? '&utm_campaign=' + camp : '');
+        // utm_source·utm_campaign 을 주소에도 — Play Console 획득 보고서가 캠페인을 센다(앱은 referrer 로 따로 센다, 2026-11-01 GoalStep 과 같게)
         var storeUrl =
-          'https://play.google.com/store/apps/details?id=' + PACKAGE + '&referrer=' + encodeURIComponent(ref);
+          'https://play.google.com/store/apps/details?id=' + PACKAGE
+          + '&utm_source=' + src + (camp ? '&utm_campaign=' + camp : '')
+          + '&referrer=' + encodeURIComponent(ref);
         var cta = document.getElementById('cta');
         cta.setAttribute('href', storeUrl);
 
         var ua = navigator.userAgent || '';
-        var isAndroid = /android/i.test(ua);
+        // 안드로이드 판별(2026-11-01 — 사장님 "GoalStep 처럼 바로 스토어로", appmonitor 전달 · GoalStep 1a932ed 와 같은 방식).
+        //   삼성 인터넷은 태블릿(S9FE)에서 'PC 화면'(데스크톱 UA)으로 열어 UA 에 Android 가 없다 → PC 로 보고 자동 이동을 안 해
+        //   'Play 스토어에서 받기' 단추만 남았다(폰은 UA 에 Android 가 있어 원래 자동). 그래서 셋을 같이 본다:
+        //   브라우저가 알려 주는 플랫폼 · 카톡에서 넘길 때 붙인 표시(k=a) · 리눅스+터치(크롬북 제외)
+        var uaPlat = (navigator.userAgentData && navigator.userAgentData.platform) || '';
+        var touch = (navigator.maxTouchPoints || 0) > 1;
+        var isAndroid = /android/i.test(ua) || /android/i.test(uaPlat) || params.get('k') === 'a'
+          || (/Linux/i.test(ua) && !/CrOS/i.test(ua) && touch);
+        // 아이패드는 'Macintosh'+터치로 온다 — 아이폰 문구를 줄지 PC 문구를 줄지 가른다
+        var isIos = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && touch);
         var inKakao = /KAKAOTALK/i.test(ua);
         if (isAndroid && inKakao) {
           // 외부 브라우저로 못 넘어가는 폰 대비(2026-10-20 — GoalStep 10/20 계기판 '카톡 안 1 · 외부 0', appmonitor 전달).
@@ -94,14 +106,17 @@
             + '#Intent;scheme=market;package=com.android.vending;end');
           cta.textContent = 'Play 스토어 앱에서 받기';
           document.getElementById('note').textContent = '스토어가 안 열리면 오른쪽 위 ⋮ → 다른 브라우저로 열기';
-          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+          // 외부 브라우저에도 '안드로이드에서 왔다'를 알린다(k=a) — 태블릿 삼성 인터넷은 PC 화면으로 열려 스스로 못 안다
+          var ext = location.href + (location.href.indexOf('?') === -1 ? '?' : '&') + 'k=a';
+          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(ext);
           return;
         }
         if (isAndroid) {
           location.href = storeUrl; // 바로 스토어로 — 버튼은 자동 이동이 막혔을 때를 위한 것
         } else {
-          document.getElementById('note').textContent =
-            '갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요.';
+          document.getElementById('note').textContent = isIos
+            ? '갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요.'
+            : '갤럭시(안드로이드) 전용 앱이에요. 폰에서 이 링크를 열어 주세요.';
         }
       })();
     </script>
