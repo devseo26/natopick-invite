@@ -97,7 +97,27 @@
         // 아이패드는 'Macintosh'+터치로 온다 — 아이폰 문구를 줄지 PC 문구를 줄지 가른다
         var isIos = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && touch);
         var inKakao = /KAKAOTALK/i.test(ua);
+        // 링크 누름 기록(2026-11-07 — appmonitor 요청서 ③, GoalStep go.html 과 같은 단계·같은 로봇 목록).
+        //   kakao = 카톡 안에서 외부 브라우저로 넘기기 직전 · ext = 외부(마지막) 브라우저 · kakao_btn = 카톡 안 'Play 스토어 앱에서 받기' 단추.
+        //   kakao 만 있고 ext 가 없으면 '카톡이 외부로 못 넘긴다'. 숫자는 08:10 계기판 '· 어제 링크 누름'.
+        //   남기는 것은 페이지·src/m/c·폰 종류·단계뿐. 로봇은 안 센다(서버 link-click 도 한 번 더 거른다).
+        //   sendBeacon 먼저(페이지가 넘어가도 브라우저가 끝까지 보낸다) — text/plain 이라 다른 주소로 보내도 사전 확인(CORS)이 없다.
+        var isBot = /bot|spider|crawl|render|headless|slurp|preview|facebookexternalhit|lighthouse/i.test(ua);
+        function hit(stage) {
+          if (isBot) return;
+          var url = 'https://ffliuxwjxhyiipshpruf.supabase.co/functions/v1/link-click';
+          var body = JSON.stringify({ page: 'go', src: src, m: medium, c: camp,
+            os: isAndroid ? 'android' : isIos ? 'ios' : 'other', stage: stage });
+          try {
+            if (navigator.sendBeacon && navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))) return;
+          } catch (e) {}
+          try {
+            fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: body })
+              .catch(function () {});
+          } catch (e) {}
+        }
         if (isAndroid && inKakao) {
+          hit('kakao');
           // 외부 브라우저로 못 넘어가는 폰 대비(2026-10-20 — GoalStep 10/20 계기판 '카톡 안 1 · 외부 0', appmonitor 전달).
           //   카톡 안에서 https 스토어 주소를 누르면 카톡 안에 웹 스토어가 뜨고 출처(referrer)가 사라진다 →
           //   단추는 **Play 스토어 앱을 바로** 연다(market 인텐트, referrer 그대로 — 사람이 누르는 거라 카톡이 막지 않는다).
@@ -105,14 +125,20 @@
           cta.setAttribute('href', 'intent://details?id=' + PACKAGE + '&referrer=' + encodeURIComponent(ref)
             + '#Intent;scheme=market;package=com.android.vending;end');
           cta.textContent = 'Play 스토어 앱에서 받기';
+          cta.addEventListener('click', function () { hit('kakao_btn'); });
           document.getElementById('note').textContent = '스토어가 안 열리면 오른쪽 위 ⋮ → 다른 브라우저로 열기';
           // 외부 브라우저에도 '안드로이드에서 왔다'를 알린다(k=a) — 태블릿 삼성 인터넷은 PC 화면으로 열려 스스로 못 안다
           var ext = location.href + (location.href.indexOf('?') === -1 ? '?' : '&') + 'k=a';
-          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(ext);
+          // 기록이 나갈 틈을 아주 잠깐 둔다(sendBeacon 이라 넘어가도 가지만 — GoalStep 과 같게)
+          setTimeout(function () {
+            location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(ext);
+          }, 150);
           return;
         }
+        hit('ext');
         if (isAndroid) {
-          location.href = storeUrl; // 바로 스토어로 — 버튼은 자동 이동이 막혔을 때를 위한 것
+          // 바로 스토어로 — 기록이 나갈 틈을 0.3초 둔다. 버튼은 자동 이동이 막혔을 때를 위한 것
+          setTimeout(function () { location.href = storeUrl; }, 300);
         } else {
           document.getElementById('note').textContent = isIos
             ? '갤럭시(안드로이드) 전용 앱이에요. 아이폰에서는 아직 쓸 수 없어요.'
