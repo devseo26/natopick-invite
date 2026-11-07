@@ -106,22 +106,42 @@
         // 아이패드는 'Macintosh'+터치로 온다 — 아이폰 문구를 줄지 PC 문구를 줄지 가른다
         var isIos = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && touch);
         var inKakao = /KAKAOTALK/i.test(ua);
+        // 링크 누름 기록(2026-11-07 — go.html 과 같은 단계, 설명은 그쪽). 초대 링크는 출처를 invite/link 로만 남긴다 —
+        //   ⚠️ 초대 코드는 절대 보내지 않는다(가족방에 들어가는 열쇠다). 서버(link-click)도 join 이면 c 를 버린다.
+        var isBot = /bot|spider|crawl|render|headless|slurp|preview|facebookexternalhit|lighthouse/i.test(ua);
+        function hit(stage) {
+          if (isBot) return;
+          var url = 'https://ffliuxwjxhyiipshpruf.supabase.co/functions/v1/link-click';
+          var body = JSON.stringify({ page: 'join', os: isAndroid ? 'android' : isIos ? 'ios' : 'other', stage: stage });
+          try {
+            if (navigator.sendBeacon && navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))) return;
+          } catch (e) {}
+          try {
+            fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: body })
+              .catch(function () {});
+          } catch (e) {}
+        }
 
         // 카톡 인앱 브라우저는 intent:// 앱 실행을 막는다 → 외부 브라우저(크롬)로 넘긴다.
         if (isAndroid && inKakao) {
+          hit('kakao');
           // 외부 브라우저로 못 넘어가는 폰 대비(2026-10-20, go.html 과 같은 이유 — appmonitor 전달).
           //   단추는 Play 스토어 앱을 바로 연다 — referrer 에 invite=코드를 실어 **설치 뒤 자동 참여는 그대로**.
           //   앱이 이미 있으면 스토어가 '열기'만 보여 코드가 안 넘어간다 → 아래에 코드를 크게 보여 직접 넣게 한다.
           cta.setAttribute('href', 'intent://details?id=' + PACKAGE + '&referrer=' + encodeURIComponent('invite=' + code)
             + '#Intent;scheme=market;package=com.android.vending;end');
           cta.textContent = 'Play 스토어 앱에서 받기';
+          cta.addEventListener('click', function () { hit('kakao_btn'); });
           msg.innerHTML = '앱으로 넘어가는 중이에요…<br />안 넘어가면 아래 단추를 눌러 주세요.<br />' +
             '앱이 이미 있으면 앱을 열고 초대코드를 넣어 주세요.<br />스토어가 안 열리면 오른쪽 위 ⋮ → 다른 브라우저로 열기';
           // 외부 브라우저에도 '안드로이드에서 왔다'를 알린다(k=a) — 태블릿 삼성 인터넷은 PC 화면으로 열려 스스로 못 안다
           var ext = location.href + (location.href.indexOf('?') === -1 ? '?' : '&') + 'k=a';
-          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(ext);
+          setTimeout(function () {
+            location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(ext);
+          }, 150);
           return;
         }
+        hit('ext');
 
         var storeUrl =
           'https://play.google.com/store/apps/details?id=' +
@@ -140,7 +160,8 @@
             encodeURIComponent(storeUrl) +
             ';end';
           cta.setAttribute('href', intentUrl);
-          location.href = intentUrl; // 즉시 시도
+          // 바로 시도 — 기록이 나갈 틈을 0.3초 둔다(go.html 과 같게)
+          setTimeout(function () { location.href = intentUrl; }, 300);
         } else {
           // iOS·데스크톱: 안드로이드 전용 앱이므로 스토어로 안내
           cta.setAttribute('href', storeUrl);
